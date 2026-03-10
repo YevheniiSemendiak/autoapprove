@@ -1,70 +1,32 @@
-name: Auto Approve PRs
+name: Auto Approve Bot PRs
 
-# Uses pull_request_target so the workflow has write permissions even for
-# Dependabot PRs (which otherwise get a read-only token with pull_request).
-# IMPORTANT: Do NOT add a checkout step here — that would expose the repo
-# to code injection from untrusted PR branches.
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
-
-permissions:
-  pull-requests: write
-
-env:
-  # ── CONFIGURATION ────────────────────────────────────────────────────────────
-  # Comma-separated list of GitHub usernames allowed to have their PRs
-  # auto-approved. Bot accounts typically have the "[bot]" suffix.
-  ALLOWED_AUTHORS: "dependabot[bot]"
-
-  # The label that must be present on the PR before it will be approved.
-  REQUIRED_LABEL: "review-ready"
-  # ── END CONFIGURATION ────────────────────────────────────────────────────────
+  schedule:
+    - cron: "0 2 * * *"   # daily at 02:00 UTC
+  workflow_dispatch:        # allow manual runs from the Actions tab
 
 jobs:
   auto-approve:
     runs-on: ubuntu-latest
     steps:
-      - name: Check author and label
-        id: check
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Run auto-approve scanner
         env:
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          # toJson produces a JSON array like ["label1","label2"]
-          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
-        run: |
-          # ── Author check ──────────────────────────────────────────────────
-          author_allowed=false
-          IFS=',' read -ra authors <<< "$ALLOWED_AUTHORS"
-          for entry in "${authors[@]}"; do
-            entry="$(echo "$entry" | xargs)"   # strip surrounding whitespace
-            if [[ "$PR_AUTHOR" == "$entry" ]]; then
-              author_allowed=true
-              break
-            fi
-          done
-          echo "author_allowed=$author_allowed" >> "$GITHUB_OUTPUT"
+          # ── Secret ─────────────────────────────────────────────────────────
+          # A PAT (or fine-grained token) with read access to org repos and
+          # pull-request write access. Store it in repo/org Secrets.
+          GH_TOKEN: ${{ secrets.AUTO_APPROVE_TOKEN }}
 
-          # ── Label check ───────────────────────────────────────────────────
-          # Use Python to safely parse the JSON array (avoids fragile grep tricks)
-          label_present=$(python3 - <<EOF
-          import json, os, sys
-          labels = json.loads(os.environ["PR_LABELS"])
-          print("true" if os.environ["REQUIRED_LABEL"] in labels else "false")
-          EOF
-          )
-          echo "label_present=$label_present" >> "$GITHUB_OUTPUT"
+          # ── Configuration (store in repo/org Variables, not Secrets) ───────
+          # Comma-separated list of GitHub org or user names to scan.
+          LIST_OF_OWNERS: ${{ vars.LIST_OF_OWNERS }}
 
-          # ── Summary ───────────────────────────────────────────────────────
-          echo "PR author : $PR_AUTHOR  (allowed=$author_allowed)"
-          echo "Labels    : $PR_LABELS  (required='$REQUIRED_LABEL' present=$label_present)"
+          # Comma-separated list of bot usernames whose PRs may be approved.
+          ALLOWED_AUTHORS: ${{ vars.ALLOWED_AUTHORS }}
 
-      - name: Approve PR
-        if: >
-          steps.check.outputs.author_allowed == 'true' &&
-          steps.check.outputs.label_present  == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr review "${{ github.event.pull_request.html_url }}" \
-            --approve \
-            --body "Auto-approved: PR is from an allowed bot and has the '$REQUIRED_LABEL' label."
+          # Label that must be present on a PR before it is approved.
+          REQUIRED_LABEL: ${{ vars.REQUIRED_LABEL }}
+        run: uv run auto-approve
