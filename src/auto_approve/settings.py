@@ -10,6 +10,7 @@ class Settings:
     owners: list[str]
     allowed_authors: list[str]
     required_label: str
+    dry_run: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -18,4 +19,5 @@ class Settings:
             owners=parse_list(os.environ["LIST_OF_OWNERS"]),
             allowed_authors=parse_list(os.environ["ALLOWED_AUTHORS"]),
             required_label=os.environ["REQUIRED_LABEL"],
+            dry_run=os.environ.get("DRY_RUN", "false").lower() in ("1", "true", "yes"),
         )

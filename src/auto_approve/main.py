@@ -13,7 +13,8 @@ def main() -> None:
         print(f"Authenticated as: {me}")
         print(f"Owners     : {cfg.owners}")
         print(f"Authors    : {cfg.allowed_authors}")
-        print(f"Label      : {cfg.required_label}\n")
+        print(f"Label      : {cfg.required_label}")
+        print(f"Dry run    : {cfg.dry_run}\n")
 
         for owner in cfg.owners:
             print(f"=== {owner} ===")
@@ -50,14 +51,17 @@ def main() -> None:
                         skipped += 1
                         continue
 
-                    client.approve_pr(
-                        pr=pr,
-                        body=(
-                            f"Auto-approved: authored by `{author}`, "
-                            f"label `{cfg.required_label}` present, CI passing."
-                        ),
-                    )
-                    print(f"  APPROVED {tag}  {pr.html_url}")
+                    if cfg.dry_run:
+                        print(f"  DRY-RUN  {tag}  {pr.html_url}")
+                    else:
+                        client.approve_pr(
+                            pr=pr,
+                            body=(
+                                f"Auto-approved: authored by `{author}`, "
+                                f"label `{cfg.required_label}` present, CI passing."
+                            ),
+                        )
+                        print(f"  APPROVED {tag}  {pr.html_url}")
                     approved += 1
 
     print(f"\nDone — approved: {approved}  skipped: {skipped}")
