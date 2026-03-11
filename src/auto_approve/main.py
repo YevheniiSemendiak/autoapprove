@@ -56,10 +56,7 @@ def main() -> None:
                     else:
                         client.approve_pr(
                             pr=pr,
-                            body=(
-                                f"Auto-approved: authored by `{author}`, "
-                                f"label `{cfg.required_label}` present, CI passing."
-                            ),
+                            body="Auto-approved",
                         )
                         print(f"  APPROVED {tag}  {pr.html_url}")
                     approved += 1
