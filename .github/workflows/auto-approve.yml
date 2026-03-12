@@ -28,7 +28,7 @@ jobs:
           ALLOWED_AUTHORS: ${{ vars.ALLOWED_AUTHORS }}
 
           # Label that must be present on a PR before it is approved.
-          REQUIRED_LABEL: ${{ vars.REQUIRED_LABEL }}
+          REQUIRED_LABEL: ${{ vars.REQUIRED_LABEL || '' }}
 
           # Set to "true" in repo Variables to log without actually approving.
           DRY_RUN: ${{ vars.DRY_RUN }}
