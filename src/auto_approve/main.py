@@ -56,7 +56,7 @@ def main() -> None:
                     else:
                         client.approve_pr(
                             pr=pr,
-                            body="Auto-approved",
+                            body="",
                         )
                         print(f"  APPROVED {tag}  {pr.html_url}")
                     approved += 1
