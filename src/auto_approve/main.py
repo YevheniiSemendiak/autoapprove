@@ -46,6 +46,11 @@ def main() -> None:
                         skipped += 1
                         continue
 
+                    if not client.all_commits_signed(pr):
+                        print(f"  SKIP    {tag} — unsigned or unverified commits")
+                        skipped += 1
+                        continue
+
                     if client.is_already_approved(pr, me):
                         print(f"  SKIP    {tag} — already approved by {me}")
                         skipped += 1
@@ -56,7 +61,10 @@ def main() -> None:
                     else:
                         client.approve_pr(
                             pr=pr,
-                            body="",
+                            body=(
+                                "Approved automatically: CI passed, "
+                                "commits are signed"
+                            ),
                         )
                         print(f"  APPROVED {tag}  {pr.html_url}")
                     approved += 1
